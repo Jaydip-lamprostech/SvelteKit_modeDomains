@@ -1,49 +1,89 @@
 <script>
   // @ts-nocheck
   import { onMount, afterUpdate } from "svelte";
-  import { page } from "$app/stores";
-  import closeIcon from "$lib/images/closeIcon.svg";
-  import menuIcon from "$lib/images/menuIcon.svg";
   import logo from "$lib/images/mode_logo.png";
+
+  // import { createWeb3Modal, defaultWagmiConfig } from "@web3modal/wagmi";
+  // import { modeTestnet } from "viem/chains";
   import { modalStore } from "$lib/stores/modalStore";
+
+  // const metadata = {
+  //   name: "Web3Modal",
+  //   description: "Web3Modal Example",
+  //   url: "https://web3modal.com",
+  //   icons: ["https://avatars.githubusercontent.com/u/37784886"],
+  // };
+  // const chains = [modeTestnet];
+
   // testing
+  import {
+    createWeb3Modal,
+    walletConnectProvider,
+    EIP6963Connector,
+  } from "@web3modal/wagmi";
 
-  import { getAccount } from "@wagmi/core";
-  let UserAddress = "";
-  let modal;
+  import { configureChains, createConfig } from "@wagmi/core";
+  import { modeTestnet } from "viem/chains";
+  import { publicProvider } from "@wagmi/core/providers/public";
+  import { InjectedConnector } from "@wagmi/core";
+  import { CoinbaseWalletConnector } from "@wagmi/core/connectors/coinbaseWallet";
+  import { WalletConnectConnector } from "@wagmi/core/connectors/walletConnect";
 
-  onMount(() => {
-    // Access the modal instance from the store
-    // const account = getAccount();
-    // if (account.address) {
-    //   UserAddress = account.address;
-    // }
-    modal = $modalStore;
+  // 1. Define constants
+  const projectId = "5bc831dcf02437ce75e6b2cce2099ae0";
+
+  // 2. Configure wagmi client
+  const { chains, publicClient } = configureChains(
+    [modeTestnet],
+    [walletConnectProvider({ projectId }), publicProvider()]
+  );
+
+  const metadata = {
+    name: "ModeDomains",
+    description: "Mode Domains",
+    url: "https://app.modedomains.xyz",
+    icons: ["https://avatars.githubusercontent.com/u/37784886"],
+  };
+
+  const wagmiConfig = createConfig({
+    autoConnect: false,
+    connectors: [
+      new WalletConnectConnector({
+        chains,
+        options: { projectId, showQrModal: false, metadata },
+      }),
+      new EIP6963Connector({ chains }),
+      new InjectedConnector({ chains, options: { shimDisconnect: true } }),
+      new CoinbaseWalletConnector({
+        chains,
+        options: { appName: metadata.name },
+      }),
+    ],
+    publicClient,
   });
-  afterUpdate(() => {
-    // You can choose to run fetchData() here as well if needed
-    // const account = getAccount();
-    // console.log(account.address);
-    // if (account.address) {
-    //   UserAddress = account.address;
-    // }
-  });
+
   let connectWalletText = "connect";
 
-  async function connectWallet() {
-    // modal.open();
+  function connectWallet() {
     connectWalletText = "connecting...";
     try {
+      const modal = createWeb3Modal({
+        wagmiConfig,
+        projectId,
+        chains,
+      });
       modal.open();
-      console.log(account);
-      if (account) {
-        connectWalletText = "connected";
-      }
+      modalStore.set(modal);
+
+      // if (account) {
+      //   connectWalletText = "connected";
+      // }
     } catch (err) {
       console.log(err.message);
       connectWalletText = "connect";
     }
   }
+
   let showMenu = false;
 
   const toggleMenu = () => {
@@ -59,6 +99,41 @@
       toggleMenu();
     }
   }
+
+  // testing the custom connect btn
+  import { watchAccount, disconnect, getAccount } from "@wagmi/core";
+  let btnInnerText = "connect";
+  let userAddressText = "";
+  function connect() {
+    console.log("btn clicked");
+    if (getAccount().isConnected) {
+      disconnect();
+      userAddressText = "";
+    } else {
+      const modal = createWeb3Modal({
+        wagmiConfig,
+        projectId,
+        chains,
+      });
+      modal.open();
+    }
+  }
+
+  // listening for account changes
+  watchAccount((account) => {
+    let add = "";
+    if (account.address) {
+      add = account.address.toString() ?? "";
+      userAddressText =
+        add.slice(0, 4) + "..." + add.slice(add.length - 5, add.length);
+    }
+
+    if (account.isConnected) {
+      btnInnerText = "Disconnect";
+    } else {
+      btnInnerText = "Connect";
+    }
+  });
 </script>
 
 <header>
@@ -102,12 +177,20 @@
         {/if}
       </div>
       <div class="nav-links">
-        <a class="nav-link" href="https://docs.modedomains.xyz/"> Docs </a>
-        <a class="nav-link" href="/"> Profile </a>
+        <a
+          class="nav-link"
+          href="https://docs.modedomains.xyz/"
+          target="_blank"
+        >
+          Docs
+        </a>
+        <a class="nav-link" href="/profile"> Profile </a>
       </div>
       <div class="cta-button">
         <!-- <w3m-button /> -->
-        <button on:click={connectWallet}>{connectWalletText}</button>
+        <!-- <button on:click={() => connectWallet()}>{connectWalletText}</button> -->
+        <button id="btn" on:click={connect}>{btnInnerText}</button>
+        <span id="user">{userAddressText}</span>
       </div>
     </div>
 
@@ -116,7 +199,7 @@
         <a class="nav-link" href="https://docs.modedomains.xyz/">
           <span class="nav-text-animate">Docs</span>
         </a>
-        <a class="nav-link" href="/">
+        <a class="nav-link" href="/profile">
           <span class="nav-text-animate">Profile</span>
         </a>
       </div>
@@ -127,6 +210,9 @@
 <style>
   a {
     text-decoration: none;
+  }
+  #user {
+    color: white;
   }
   /* Navbar.css */
   .navbar-parent {
