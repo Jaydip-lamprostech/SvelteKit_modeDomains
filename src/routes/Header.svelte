@@ -1,9 +1,49 @@
 <script>
+  // @ts-nocheck
+  import { onMount, afterUpdate } from "svelte";
   import { page } from "$app/stores";
   import closeIcon from "$lib/images/closeIcon.svg";
   import menuIcon from "$lib/images/menuIcon.svg";
   import logo from "$lib/images/mode_logo.png";
+  import { modalStore } from "$lib/stores/modalStore";
+  // testing
 
+  import { getAccount } from "@wagmi/core";
+  let UserAddress = "";
+  let modal;
+
+  onMount(() => {
+    // Access the modal instance from the store
+    // const account = getAccount();
+    // if (account.address) {
+    //   UserAddress = account.address;
+    // }
+    modal = $modalStore;
+  });
+  afterUpdate(() => {
+    // You can choose to run fetchData() here as well if needed
+    // const account = getAccount();
+    // console.log(account.address);
+    // if (account.address) {
+    //   UserAddress = account.address;
+    // }
+  });
+  let connectWalletText = "connect";
+
+  async function connectWallet() {
+    // modal.open();
+    connectWalletText = "connecting...";
+    try {
+      modal.open();
+      console.log(account);
+      if (account) {
+        connectWalletText = "connected";
+      }
+    } catch (err) {
+      console.log(err.message);
+      connectWalletText = "connect";
+    }
+  }
   let showMenu = false;
 
   const toggleMenu = () => {
@@ -65,7 +105,10 @@
         <a class="nav-link" href="https://docs.modedomains.xyz/"> Docs </a>
         <a class="nav-link" href="/"> Profile </a>
       </div>
-      <div class="cta-button"><w3m-button /></div>
+      <div class="cta-button">
+        <!-- <w3m-button /> -->
+        <button on:click={connectWallet}>{connectWalletText}</button>
+      </div>
     </div>
 
     <div class={showMenu ? "mobile-menu show" : "mobile-menu"}>

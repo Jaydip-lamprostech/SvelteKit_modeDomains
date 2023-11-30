@@ -1,5 +1,6 @@
 <script>
   import Header from "./Header.svelte";
+  import Footer from "./Footer.svelte";
   import "./styles.css";
   import { createWeb3Modal, defaultWagmiConfig } from "@web3modal/wagmi";
   import { modeTestnet } from "viem/chains";
@@ -14,8 +15,13 @@
   };
   const chains = [modeTestnet];
   const wagmiConfig = defaultWagmiConfig({ chains, projectId, metadata });
-  const modal = createWeb3Modal({ wagmiConfig, projectId, chains });
-  modal.setThemeMode("dark");
+  const modal = createWeb3Modal({
+    wagmiConfig,
+    projectId,
+    chains,
+    themeMode: "dark",
+  });
+  // modal.setThemeMode("dark");
   modalStore.set(modal);
 </script>
 
@@ -26,11 +32,7 @@
     <slot />
   </main>
 
-  <footer>
-    <p>
-      visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to learn SvelteKit
-    </p>
-  </footer>
+  <Footer />
 </div>
 
 <style>
