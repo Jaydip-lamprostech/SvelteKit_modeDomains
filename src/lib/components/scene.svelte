@@ -104,17 +104,17 @@
     const lightIntensity = 0.4 + rng() * 0.1 - 0.05;
     const lightDistance = 5000 + rng() * 1000 - 500;
 
-    for (let colorIndex = 0; colorIndex < neonColors.length; colorIndex++) {
+    for (let colorIndex = 0; colorIndex < 30; colorIndex++) {
       const color = new Color(neonColors[colorIndex]);
-      for (let i = 0; i < lightCount / neonColors.length; i++) {
-        const light = new PointLight(color, lightIntensity, lightDistance);
-        light.position.set(
-          (rng() - 0.5) * radius * 2,
-          rng() * numBoxes * baseDistance - ((numBoxes - 1) * baseDistance) / 2,
-          (rng() - 0.5) * radius * 2
-        );
-        scene.add(light);
-      }
+      // for (let i = 0; i < lightCount / neonColors.length; i++) {
+      const light = new PointLight(color, lightIntensity, lightDistance);
+      light.position.set(
+        (rng() - 0.5) * radius * 2,
+        rng() * numBoxes * baseDistance - ((numBoxes - 1) * baseDistance) / 2,
+        (rng() - 0.5) * radius * 2
+      );
+      scene.add(light);
+      // }
     }
   }
   function createMediumDetail() {
