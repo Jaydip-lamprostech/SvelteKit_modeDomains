@@ -67,7 +67,7 @@
   <Wrapper bind:input bind:isPremium bind:isVip>
     <Scene bind:input bind:isPremium bind:isVip />
   </Wrapper>
-  <button on:click={openPopup}>Open Popup</button>
+  <!-- <button on:click={openPopup}>Open Popup</button> -->
   <RegistartionPopup
     {popupContainer}
     {closePopup}

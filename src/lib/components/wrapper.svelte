@@ -4,8 +4,8 @@
   import { onMount, afterUpdate } from "svelte";
 
   export let input = "";
-  export let isPremium = false;
-  export let isVip = true;
+  export let isPremium = true;
+  export let isVip = false;
 
   let textElement;
   let wrapperElement;

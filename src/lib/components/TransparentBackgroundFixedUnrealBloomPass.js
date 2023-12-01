@@ -55,9 +55,6 @@ class TransparentBackgroundFixedUnrealBloomPass extends Pass {
   oldClearAlpha;
   basic;
   fsQuad;
-  /**
-   * @type {Vector2}
-   */
   static BlurDirectionX;
   static BlurDirectionY;
   constructor(resolution, strength, radius, threshold) {

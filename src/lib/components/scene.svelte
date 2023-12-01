@@ -1,7 +1,6 @@
 <script>
   // @ts-nocheck
-
-  import { onMount } from "svelte";
+  import { afterUpdate, onMount } from "svelte";
   import {
     PerspectiveCamera,
     WebGLRenderer,
@@ -13,6 +12,7 @@
     Mesh,
     PointLight,
     Vector2,
+    LOD,
   } from "three";
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
   import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
@@ -21,11 +21,10 @@
   import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
   import { PixelShader } from "./PixelShader";
   import seedrandom from "seedrandom";
-  // import type { Object3D } from "three";
 
   export let input;
   export let isPremium = false;
-  export let isVip = true;
+  export let isVip = false;
 
   let rng = seedrandom(input);
   let canvas;
@@ -47,16 +46,20 @@
   let boxDepth = boxHeight * 1;
   let pixelFactor = 1;
   let lightCount = 100;
-
+  const lightIntensity = isPremium ? 1 : 0.4 + rng() * 0.1 - 0.05;
+  const lightDistance = 5000 + rng() * 1000 - 500;
+  let inputRGV;
   let boxColor = "#dffe00";
   let neonColors = ["#000000", "#494949", "#d2d0cb"];
 
   let boxesLeft;
   let boxesRight;
+  let lod = new LOD();
 
   $: if (input) {
     rng = seedrandom(input);
-    numBoxes = 320 + Math.floor(rng() * 20 - 10);
+
+    numBoxes = 300 + Math.floor(rng() * 20 - 10);
     baseDistance = 0.035 + rng() * 0.005 - 0.0025;
     radius = 0.96 + rng() * 0.04 - 0.08;
     turns = 5 + Math.floor(rng() * 2 - 1.4);
@@ -86,6 +89,18 @@
       (child) => !(child instanceof PointLight)
     );
 
+    // Add different levels of detail to the LOD object
+    const highDetail = createBoxesAlongHelix(); // High detail
+    const mediumDetail = createMediumDetail(); // Medium detail (implement this function)
+    const lowDetail = createLowDetail(); // Low detail (implement this function)
+
+    lod.addLevel(highDetail, 0);
+    lod.addLevel(mediumDetail, 100); // Adjust the distance as needed
+    lod.addLevel(lowDetail, 200); // Adjust the distance as needed
+
+    lod.updateMatrixWorld(); // Update LOD matrices
+    scene.add(lod);
+
     const lightIntensity = 0.4 + rng() * 0.1 - 0.05;
     const lightDistance = 5000 + rng() * 1000 - 500;
 
@@ -102,7 +117,29 @@
       }
     }
   }
+  function createMediumDetail() {
+    // Implement medium detail geometry here
+    const geometry = new BoxGeometry(0.5, 0.05, 0.1);
+    const material = new MeshStandardMaterial({
+      color: boxColor,
+      metalness: 0,
+      roughness: 1,
+    });
+    const mesh = new Mesh(geometry, material);
+    return mesh;
+  }
 
+  function createLowDetail() {
+    // Implement low detail geometry here
+    const geometry = new BoxGeometry(0.2, 0.05, 0.1);
+    const material = new MeshStandardMaterial({
+      color: boxColor,
+      metalness: 0,
+      roughness: 1,
+    });
+    const mesh = new Mesh(geometry, material);
+    return mesh;
+  }
   onMount(() => {
     init();
     animate();
@@ -114,17 +151,31 @@
       updateHelixAndLights();
     } else if (!isPremium && isVip) {
       renderer.setClearColor(new Color("#dffe00"));
+      updateHelixAndLights();
     }
 
+    // return () => {
+    //   structure.traverse((object) => {
+    //     if (object.geometry) object.geometry.dispose();
+    //     if (object.material) object.material.dispose();
+    //   });
+    //   cancelAnimationFrame(frameId);
+    //   renderer.dispose();
+    //   controls.dispose();
+    //   composer.dispose();
+    //   scene.clear();
+    // };
     return () => {
+      // Dispose of Three.js objects
+      structure.traverse((object) => {
+        if (object.geometry) object.geometry.dispose();
+        if (object.material) object.material.dispose();
+      });
       cancelAnimationFrame(frameId);
       renderer.dispose();
       controls.dispose();
+      composer.dispose();
       scene.clear();
-    };
-
-    return () => {
-      // Dispose of Three.js objects
       if (structure) {
         structure.traverse((child) => {
           if (child instanceof THREE.Mesh) {
@@ -164,8 +215,8 @@
       if (renderer) {
         renderer.dispose();
       }
-      // if (controlsRef.current) {
-      //   controlsRef.current.dispose();
+      // if (controls) {
+      //   controls.dispose();
       // }
 
       // Clear the scene
@@ -211,9 +262,6 @@
   }
 
   function addRandomLights() {
-    const lightIntensity = isPremium ? 20 : 0.4 + rng() * 0.1 - 0.05;
-    const lightDistance = 5000 + rng() * 1000 - 500;
-
     for (let colorIndex = 0; colorIndex < neonColors.length; colorIndex++) {
       const color = new Color(neonColors[colorIndex]);
       for (let i = 0; i < lightCount / neonColors.length; i++) {
@@ -284,6 +332,7 @@
       0.1,
       1000
     );
+    camera.frustumCulled = true;
     renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setSize(canvas.clientWidth, canvas.clientHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -296,7 +345,7 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = WebGLRenderer.PCFSoftShadowMap;
 
-    addRandomLights();
+    // addRandomLights();
 
     structure = createBoxesAlongHelix();
     scene.add(structure);
@@ -314,8 +363,8 @@
 
     const pixelPass = new ShaderPass(PixelShader);
     pixelPass.uniforms["resolution"].value = new Vector2(
-      canvas.clientWidth * 2,
-      canvas.clientHeight * 2
+      canvas.clientWidth * 1,
+      canvas.clientHeight * 1
     );
     pixelPass.uniforms["pixelSize"].value = pixelFactor;
     composer.addPass(pixelPass);
@@ -328,9 +377,9 @@
     });
 
     if (isPremium) {
-      composer.addPass(bloomPass);
+      composer.addPass(pixelPass);
     } else if (isPremium) {
-      composer.addPass(bloomPass);
+      composer.addPass(pixelPass);
     }
   }
 
